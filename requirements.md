@@ -1,6 +1,7 @@
 # 活动票务与报名系统需求整理
 
-仓库地址：https://github.com/yekong-zhang/Software-Engineering/tree/main/lab1
+仓库地址：https://github.com/yekong-zhang/Software-Engineering
+分支：lab1
 
 版本：v0.1　日期：2026/10/22
 
