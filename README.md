@@ -1,2 +1,2 @@
 # Software-Engineering
-Used for labs of Software ENgineering course
+Used for labs of Software Engineering course
