@@ -1,0 +1,37 @@
+@startuml
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 15
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #52637A
+skinparam packageStyle rectangle
+skinparam classBackgroundColor #EFF5FC
+skinparam componentBackgroundColor #EFF5FC
+skinparam stateBackgroundColor #EFF5FC
+skinparam roundcorner 10
+title 推荐部署方案 · 部署图（结构性图）
+node "终端设备" {
+ artifact "浏览器\n桌面 / 移动端" as Browser
+}
+node "应用主机" {
+ artifact "反向代理\nHTTPS + 静态 UI" as Proxy
+ node "应用进程" {
+ artifact "REST API\n模块化单体" as App
+ artifact "定时扫描 / Outbox Worker\n可同进程运行" as Worker
+ }
+}
+node "数据库主机（原型可合并）" {
+ database "PostgreSQL" as DB
+ artifact "持久化数据卷" as Disk
+}
+Browser --> Proxy : HTTPS
+Proxy --> App : HTTP / 内网
+App --> DB : SQL / 事务
+Worker --> DB : 锁定、认领、重试
+DB --> Disk : WAL / 数据文件
+note bottom of DB
+业务成功必须以数据库提交成功为准。
+重启后扫描未处理到期任务和未投递事件。
+备份为建议；未承诺灾难恢复指标。
+end note
+@enduml

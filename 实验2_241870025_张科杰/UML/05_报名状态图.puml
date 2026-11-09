@@ -1,0 +1,44 @@
+@startuml
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 15
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #52637A
+skinparam packageStyle rectangle
+skinparam classBackgroundColor #EFF5FC
+skinparam componentBackgroundColor #EFF5FC
+skinparam stateBackgroundColor #EFF5FC
+skinparam roundcorner 10
+title 报名生命周期 · 状态图（行为性图）
+state "已报名" as R
+state "候补中" as W
+state "已取消" as C
+state "已签到" as I
+state "缺席" as N
+state "活动取消" as X
+state "候补失效" as E
+[*] --> R : 报名成功 / 占位、签发凭证
+[*] --> W : 满额后主动候补 / 不占容量
+W --> R : 截止前按票种 FIFO 递补\n占位、签发凭证、通知
+W --> E : 到达报名截止
+R --> C : 本人截止前取消\n失效凭证、释放名额
+R --> I : 授权场次、有效时段首次验票
+R --> N : 正常场次结束且未签到
+R --> X : 所属活动 / 场次 / 票种取消
+W --> X : 所属活动 / 场次 / 票种取消
+I --> I : 重复验票 / 仅提示、不增计数
+note right of W
+“退出候补”动作已确认，退出后的状态名待确认。
+实现建议：先用候补退出事件 + active=false表达，
+不强行归入“已取消”；映射与竞争反馈需确认。
+end note
+note right of I
+范围取消后保留原签到事实；
+通过范围标志阻止新的签到。
+不把已签到直接改为活动取消。
+end note
+note bottom of X
+其他历史状态在取消时的处理、活动整体结束时点尚待确认。
+本图只绘制已明确的转换；无箭头不表示已确认禁止。
+end note
+@enduml

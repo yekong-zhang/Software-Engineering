@@ -1,0 +1,56 @@
+@startuml
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 15
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #52637A
+skinparam packageStyle rectangle
+skinparam classBackgroundColor #EFF5FC
+skinparam componentBackgroundColor #EFF5FC
+skinparam stateBackgroundColor #EFF5FC
+skinparam roundcorner 10
+title 四类角色与功能范围 · 用例图（行为性图）
+left to right direction
+actor 参与者 as P
+actor 组织者 as O
+actor 检票人员 as C
+actor 平台管理员 as A
+actor "系统时钟 / Worker" as W
+rectangle 活动票务与报名系统 {
+usecase "注册 / 登录" as U1
+usecase "组合查询活动" as U2
+usecase "报名 / 查询凭证\n取消本人报名" as U3
+usecase "主动候补 / 退出候补" as U4
+usecase "查看站内通知" as U5
+usecase "活动与场次票种配置\n提交审核 / 修改 / 取消" as U6
+usecase "授权场次检票人员" as U7
+usecase "统计 / 名单筛选与导出" as U8
+usecase "扫描 / 输入凭证验票" as U9
+usecase "首次及变更审核\n违规活动取消" as U10
+usecase "账号角色管理" as U11
+usecase "授权范围日志查询" as U12
+usecase "自动递补 / 截止失效\n场次结束缺席处理" as U13
+usecase "通知投递重试" as U14
+}
+P --> U1
+P --> U2
+P --> U3
+P --> U4
+P --> U5
+O --> U6
+O --> U7
+O --> U8
+O --> U12
+C --> U9
+A --> U10
+A --> U11
+A --> U8 : 平台汇总
+A --> U12
+W --> U13
+W --> U14
+note bottom of U8
+组织者：仅自己的活动名单、统计。
+管理员：授权范围平台汇总；不因此自动获得名单导出权限。
+角色兼任规则待确认，图中不设置角色继承。
+end note
+@enduml

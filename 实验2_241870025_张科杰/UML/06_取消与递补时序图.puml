@@ -1,0 +1,58 @@
+@startuml
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 15
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #52637A
+skinparam packageStyle rectangle
+skinparam classBackgroundColor #EFF5FC
+skinparam componentBackgroundColor #EFF5FC
+skinparam stateBackgroundColor #EFF5FC
+skinparam roundcorner 10
+title 取消报名并自动递补 · 时序图（交互性图）
+autonumber
+actor 参与者 as U
+participant "API / 权限" as API
+participant "事务应用服务" as S
+database PostgreSQL as DB
+participant "通知 Worker" as W
+U -> API : 取消本人报名（幂等键）
+API -> S : 身份、归属校验
+S -> DB : BEGIN；认领幂等键\n锁活动→场次→票种→报名记录
+DB --> S : 当前状态 / 截止 / 可用名额
+alt 同键同请求已有成功结果
+ S -> DB : 读取原结果，结束事务
+ S --> API : 原取消结果（不重复释放）
+else 新请求
+ S -> S : 持锁后读取服务器时间\n重验取消范围、状态、报名截止
+ alt 已截止 / 非本人 / 非已报名
+  S -> DB : ROLLBACK
+  S --> API : 明确拒绝（不修改名额）
+ else 合法取消
+  S -> DB : 已报名→已取消；凭证失效
+  S -> DB : 锁定本票种最早有效候补
+  alt 未截止且范围有效、存在候补
+   S -> DB : 候补→已报名；唯一凭证\n写递补事件 Outbox
+  else 无可递补者或已截止
+   S -> DB : 保留空额；不得截止后递补
+  end
+  S -> DB : 写审计、幂等结果；COMMIT
+  DB --> S : 提交成功
+  S --> API : 取消成功
+ end
+end
+API --> U : 返回结果或提示查询重试
+W -> DB : 读取待投递 Outbox 事件
+W -> DB : 唯一事件+接收人去重写站内通知
+alt 投递失败
+ W -> DB : 保留待重试，不回滚业务
+else 投递成功
+ W -> DB : 标记已投递
+end
+note over S,DB
+范围取消也按同一锁顺序执行。
+先取得共同业务锁并成功保存的一方决定后续可见结果。
+任一步业务写入失败则整个业务事务回滚。
+队列顺序用票种内持久化单调 queueNo（设计建议）。
+end note
+@enduml

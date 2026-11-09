@@ -1,0 +1,125 @@
+@startuml
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 15
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #52637A
+skinparam packageStyle rectangle
+skinparam classBackgroundColor #EFF5FC
+skinparam componentBackgroundColor #EFF5FC
+skinparam stateBackgroundColor #EFF5FC
+skinparam roundcorner 10
+title 活动票务与报名系统 · 领域类图（结构性图）
+hide empty methods
+class User {
+ +id: UUID
+ +account: String <<unique>>
+ +passwordHash: String
+}
+class Role {
+ +code: RoleCode
+}
+class Event {
+ +id: UUID
+ +ownerId: UUID
+ +name: String
+ +status: EventStatus
+ +version: Integer
+ +cancel(reason)
+}
+class Session {
+ +id: UUID
+ +eventId: UUID
+ +location: String
+ +eventStart, eventEnd: Instant
+ +signupStart, signupEnd: Instant
+ +checkStart, checkEnd: Instant
+ +cancelled: Boolean
+}
+class TicketType {
+ +id: UUID
+ +sessionId: UUID
+ +description: String
+ +capacity: Integer
+ +nextQueueNo: Long
+ +cancelled: Boolean
+}
+class Registration {
+ +id: UUID
+ +userId, sessionId, ticketTypeId: UUID
+ +name, contact: String
+ +status: RegistrationStatus
+ +active: Boolean
+ +waitlistWithdrawnAt: Instant [0..1]
+ +queueNo: Long [0..1]
+ +credential: String [0..1] <<unique>>
+ +createdAt: Instant
+ +version: Integer
+}
+class CheckIn {
+ +registrationId: UUID <<unique>>
+ +checkerId: UUID
+ +checkedAt: Instant
+}
+class CheckAuthorization {
+ +checkerId, sessionId: UUID
+ +active: Boolean
+}
+class Review {
+ +id: UUID
+ +reviewerId: UUID [0..1]
+ +kind: INITIAL | CHANGE
+ +decision: PENDING | APPROVED | REJECTED
+ +reason: String
+}
+class ChangeRequest {
+ +id: UUID
+ +baseVersion: Integer
+ +proposedSnapshot: JSON
+}
+class Notification {
+ +id, recipientId: UUID
+ +businessEventId: UUID
+ +content: String
+}
+class OutboxEvent {
+ +id: UUID
+ +type, payload: String
+ +deliveryState: String
+}
+class AuditLog {
+ +id: UUID
+ +actor, object, action, result: String
+ +occurredAt: Instant
+}
+class IdempotencyRecord {
+ +userId, operation, key: String
+ +requestHash, resultRef: String
+}
+User "0..*" -- "1..*" Role : 分配 >
+User "1" -- "0..*" Event : 组织者拥有 >
+Event "1" *-- "0..*" Session
+Session "1" *-- "0..*" TicketType
+TicketType "1" -- "0..*" Registration
+User "1" -- "0..*" Registration
+Registration "1" -- "0..1" CheckIn
+Session "1" -- "0..*" CheckAuthorization
+User "1" -- "0..*" CheckAuthorization
+Event "1" -- "0..*" Review
+Event "1" -- "0..*" ChangeRequest
+ChangeRequest "0..1" -- "1" Review : 变更审核
+User "1" -- "0..*" Notification
+OutboxEvent ..> Notification : 投递并去重
+User "1" -- "0..*" IdempotencyRecord
+AuditLog ..> Event : 以对象标识关联
+note bottom of Registration
+sessionId 必须与票种归属场次一致（复合外键）。
+有效占位：已报名 / 候补中 / 已签到 / 缺席。
+同 userId + sessionId 的有效占位最多一条。
+退出候补后的状态名称尚待确认，不增造业务终态。
+end note
+note bottom of Event
+草稿允许零场次，提交审核前校验配置完整。
+组合关系表达生命周期归属；有历史记录时禁止级联硬删除。
+end note
+@enduml

@@ -1,0 +1,50 @@
+@startuml
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 15
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #52637A
+skinparam packageStyle rectangle
+skinparam classBackgroundColor #EFF5FC
+skinparam componentBackgroundColor #EFF5FC
+skinparam stateBackgroundColor #EFF5FC
+skinparam roundcorner 10
+title 模块架构与交互 · 组件图（结构性图）
+left to right direction
+component "四角色 Web UI\n参与者 / 组织者 / 检票员 / 管理员" as UI
+component "API 入口\n认证、输入校验、对象权限" as API
+package "模块化单体应用" {
+component "M1 账号与授权" as M1
+component "M2 活动与审核\n含版本化修改、取消" as M2
+component "M3 发现与报名\n含个人凭证与取消" as M3
+component "M4 候补与定时任务" as M4
+component "M5 验票与签到" as M5
+component "M6 统计与名单导出" as M6
+component "M7 站内通知" as M7
+component "M8 审计日志" as M8
+component "事务应用服务\n统一锁顺序 / 幂等 / Outbox" as TX
+}
+database "PostgreSQL\n业务表、审计、幂等、Outbox" as DB
+UI --> API : HTTPS / JSON
+API --> M1
+API --> M2
+API --> M3
+API --> M5
+API --> M6
+API --> M7
+API --> M8
+M2 --> TX : 审核生效、取消、增容
+M3 --> TX : 报名 / 取消
+M4 --> TX : 递补 / 截止失效 / 缺席
+M5 --> TX : 唯一签到
+TX --> DB : 原子提交业务与事件
+M6 --> DB : 授权范围只读查询
+M1 --> DB
+M8 --> DB : 审计查询
+M7 --> DB : 消费 Outbox / 去重写通知
+M4 --> DB : 到期对象扫描
+note bottom of TX
+M2、M3、M4、M5共用事务边界与业务锁。
+模块调用发生在同一进程，图中不表示微服务。
+end note
+@enduml
